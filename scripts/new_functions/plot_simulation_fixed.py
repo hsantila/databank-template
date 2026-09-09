@@ -31,11 +31,11 @@ def _as_id_list(value) -> list[str]:
 
 
 def _op_to_nested(op_dict: dict | None) -> dict:
-    """Convert OP dictionary values to the nested shape expected by ipylib plotting."""
+    """Convert OP dictionary values to the nested shape expected by ipylib."""
     if not op_dict:
         return {}
 
-    nested = {}
+    nested: dict[str, list] = {}
     for key, value in op_dict.items():
         if isinstance(value, list) and value and isinstance(value[0], (list, tuple)):
             nested[key] = value
@@ -82,7 +82,11 @@ def _ff_to_curve(ff_data) -> list[list[float]] | None:
     return None
 
 
-def _load_op_experiment_dict(lipid: str, exp_ids: list[str], op_collection: ExperimentCollection) -> dict:
+def _load_op_experiment_dict(
+    lipid: str,
+    exp_ids: list[str],
+    op_collection: ExperimentCollection,
+) -> dict:
     """Merge OP experiment dictionaries for a lipid using ExperimentCollection."""
     op_exp_flat = {}
     for exp_id in exp_ids:
@@ -100,7 +104,7 @@ def _load_first_ff_experiment_curve(
     exp_ids: list[str],
     ff_collection: ExperimentCollection,
 ) -> tuple[str | None, list[list[float]] | None]:
-    """Load first available FF experiment curve from ExperimentCollection."""
+    """Load the first available FF experiment curve from ExperimentCollection."""
     for exp_id in exp_ids:
         exp = ff_collection.get(exp_id)
         if exp is None:
@@ -115,10 +119,10 @@ def plotSimulation_fixed(system, lipid: str):  # noqa: N802
     """
     Robust drop-in replacement for fairmd.lipids.ipylib.plotSimulation.
 
-    Intent preserved from the original helper:
-    - print DOI + quality summary
-    - plot simulated FF and experimental FF (if available)
-    - plot simulated OP and experimental OP for a selected lipid (if available)
+    The intent matches the upstream helper:
+    - print DOI and quality summary
+    - plot simulated FF and experimental FF when available
+    - plot simulated OP and experimental OP for the selected lipid when available
 
     This version tolerates modern EXPERIMENT schemas where ORDERPARAMETER entries
     are lists of experiment IDs instead of dictionaries.
@@ -168,7 +172,9 @@ def plotSimulation_fixed(system, lipid: str):  # noqa: N802
             plotFormFactor(ff_sim, 1, "Simulation", "red")
         if ff_exp is not None:
             try:
-                ff_scale = float(calc_ff_scaling_distance(np.array(ff_exp), np.array(ff_sim))[0])
+                ff_scale = float(
+                    calc_ff_scaling_distance(np.array(ff_exp), np.array(ff_sim))[0]
+                )
                 if ff_exp_id is not None:
                     print(f"Using FF scale {ff_scale:.4g} from experiment {ff_exp_id}.")
             except Exception:
@@ -182,7 +188,8 @@ def plotSimulation_fixed(system, lipid: str):  # noqa: N802
         plt.show()
         print(f"Form factor plotting failed: {exc}")
 
-    op_sim = _registry_ready_op(op_sim.get(lipid) if isinstance(op_sim, dict) and lipid in op_sim else op_sim, lipid)
+    op_sim_lipid = op_sim.get(lipid) if isinstance(op_sim, dict) and lipid in op_sim else op_sim
+    op_sim = _registry_ready_op(op_sim_lipid, lipid)
     op_exp = _registry_ready_op(op_exp, lipid)
 
     if op_sim and op_exp:
