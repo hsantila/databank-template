@@ -5,7 +5,9 @@ import numpy as np
 
 from fairmd.lipids.api import get_FF, get_OP, get_quality
 from fairmd.lipids.analib.formfactor import calc_ff_scaling_distance
+from fairmd.lipids.auxiliary.opconvertor import build_nice_OPdict
 from fairmd.lipids.experiment import ExperimentCollection
+from fairmd.lipids.molecules import Lipid
 from fairmd.lipids.ipylib import plotFormFactor, plotOrderParameters
 
 
@@ -40,6 +42,18 @@ def _op_to_nested(op_dict: dict | None) -> dict:
         else:
             nested[key] = [value]
     return nested
+
+
+def _registry_ready_op(op_dict: dict | None, lipid: str) -> dict:
+    """Convert OP data into the registry-sorted structure used by FAIRMD plots."""
+    if not op_dict:
+        return {}
+
+    try:
+        lipid_obj = Lipid(lipid)
+        return build_nice_OPdict(op_dict, lipid_obj)
+    except Exception:
+        return _op_to_nested(op_dict)
 
 
 def _ff_to_curve(ff_data) -> list[list[float]] | None:
@@ -167,6 +181,9 @@ def plotSimulation_fixed(system, lipid: str):  # noqa: N802
     except Exception as exc:
         plt.show()
         print(f"Form factor plotting failed: {exc}")
+
+    op_sim = _registry_ready_op(op_sim.get(lipid) if isinstance(op_sim, dict) and lipid in op_sim else op_sim, lipid)
+    op_exp = _registry_ready_op(op_exp, lipid)
 
     if op_sim and op_exp:
         plotOrderParameters(op_sim, op_exp)
